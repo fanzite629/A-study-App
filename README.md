@@ -1,6 +1,6 @@
 # A-study-App · 学习桌宠
 
-已完成的 Windows 学习桌宠「暖阳学者」，支持任务选择、专注计时、自动记录、下一步书签与今天回看。基于 Electron，桌宠和主窗口共用一个计时与数据核心。
+Windows 学习桌宠「暖阳学者」加一个完整的主窗口：专注计时、周计划、目标树、复盘，以及可接入任意 OpenAI 兼容模型的 AI 聊天与 Agent。基于 Electron，桌宠和主窗口共用一个计时与数据核心。
 
 <img src="desktop/assets/characters/warm-scholar/states/idle.png" alt="暖阳学者默认立绘" width="220">
 
@@ -25,6 +25,28 @@
 | 角色包 | 独立 manifest 与透明 PNG，可替换、重新加载；缺少可选素材回退 idle |
 
 没有计时记录不代表没有学习；任务不会自动改期，复盘备注可以稍后补充。
+
+### 主窗口（源码版，尚未发布 EXE）
+
+| 页面 | 当前行为 |
+|---|---|
+| 今天 | 主任务、5 / 10 分钟 / 按计划 / 正计时、今天的任务、之前未完成、以后清单、当天记录与下一步 |
+| 周计划 | 本周重点、打算投入的时长、已安排与已记录对比、七天加“本周未定”，拖动任务换天 |
+| 目标 | 最多 6 层的目标树，目标下挂任务，显示完成进度和已记录时长，标出哪些节点是 AI 建议的 |
+| 复盘 | 按天 / 按周；事实只从计时记录计算；“我的反思”和“AI 草稿”分开保存 |
+| 聊天 | 类似 Claude 的对话界面：会话列表、流式输出、Markdown、停止生成、工具调用过程、提议卡片 |
+| 设置 | 模型配置（接口地址、密钥、模型名）、连通与工具调用检测、桌宠开关、数据导入导出 |
+
+<img src="docs/app/screenshots/chat-proposal.png" alt="聊天页里的目标树提议卡片" width="640">
+
+**模型接入**：只支持 OpenAI 兼容格式（`POST {接口地址}/chat/completions`）。密钥用系统加密（Windows DPAPI）后保存在本机，只在主进程里解密，界面读不回来。保存配置时会测试连通，并检测模型是否支持工具调用；不支持的模型只能纯聊天。
+
+**Agent 的边界**：
+
+- 读取类工具直接执行（概况、任务、目标树、某一周、某一天）。
+- 写入类工具只生成“提议”，在聊天里显示为卡片；点“确认写入”后才执行，且只执行一次。
+- 没有任何工具能新建或修改计时记录，也不能把任务标记为完成。
+- AI 写入的目标、任务、周计划都带有“AI 建议”标记。
 
 ## 角色与图案
 
@@ -56,21 +78,27 @@ npm start
 ```
 
 ```powershell
-npm run start:pet   # 只显示桌宠
-npm test           # 核心逻辑、保存、几何、命中与素材测试
-npm run test:windows # 启动真实 Electron 的集成检查
+npm start          # 先构建主窗口界面，再启动桌宠和主窗口
+npm run start:pet  # 只显示桌宠
+npm test           # 核心、计划层、模型接入、Agent 循环、保存、几何、命中与素材测试
+npm run typecheck  # 主窗口界面的 TypeScript 检查
+npm run test:app   # 启动真实 Electron，用本地假模型跑通主窗口整条流程
+npm run test:windows # 桌宠的集成检查
 npm run dist       # 生成 Windows 便携版，输出到 desktop/dist
 ```
 
-开发启动同时显示临时控制台；便携程序默认只启动桌宠，可加 `--main` 打开主窗口。完整操作与开发说明见 [desktop/README.md](desktop/README.md)。
+开发启动同时打开主窗口；便携程序默认只启动桌宠，可加 `--main` 打开主窗口。原来的临时控制台保留为“开发控制台”（托盘菜单或 `--console`），用于桌宠诊断。完整操作与开发说明见 [desktop/README.md](desktop/README.md)。
 
 ## 目录与实现入口
 
 ```text
 desktop/
-  src/main/       共享数据核心、计时、保存、窗口、托盘、角色包加载
-  src/preload/    桌宠和主窗口的受限 IPC 桥接
-  src/renderer/   桌宠交互、角色显示及临时主窗口
+  src/main/       共享数据核心（core.js）、计划层（plan.js）、保存、窗口、托盘、角色包加载
+  src/main/ai/    模型接入（provider）、配置与密钥（profiles）、会话存储（chats）、
+                  工具注册表（tools）、Agent 循环与复盘草稿（service）
+  src/preload/    桌宠、主窗口和开发控制台的受限 IPC 桥接
+  src/renderer/   桌宠交互、角色显示及开发控制台
+  ui/             主窗口界面源码（Vite + React + TypeScript），构建到 ui-dist/
   src/shared/     状态映射、透明度命中、布局与资源包校验
   assets/         正式九状态角色和托盘图标
   test/           单元与 Windows 集成测试
@@ -84,6 +112,10 @@ docs/desktop-pet/
 
 ## 当前范围
 
-这是已完成的桌宠及临时共享控制台，完整 T计划 v4.0 平台尚未接入。当前动作包含状态立绘切换、眨眼和轻微呼吸；Live2D、逐帧走路和联网 AI 对话尚未实现。平台接入契约见 [integration-handoff.md](docs/desktop-pet/integration-handoff.md)。
+已发布的 v0.1.0 EXE 只包含桌宠和临时控制台。主窗口、计划层和 AI 功能目前只在源码中，尚未打包发布。主窗口是重新设计的，没有移植 T计划 v4.0 HTML；数据结构升级到 schema 2（新增目标、周计划、复盘），首次打开旧数据时会先另存一份 `before-schema-1-upgrade-*.json`。
+
+桌宠动作仍是状态立绘切换、眨眼和轻微呼吸；Live2D 和逐帧走路尚未实现。桌宠本身不显示聊天内容，只在右键菜单里提供“和 AI 聊聊”入口。
+
+主窗口的自动化测试是在 Linux 虚拟显示下的 Electron 里跑通的，用的是本地假模型服务；还没有在 Windows 实机上验证，也没有用真实的模型服务商验证。不同服务商对工具调用的支持不一致，需要逐个实测。[integration-handoff.md](docs/desktop-pet/integration-handoff.md) 写于主窗口重构之前，其中“主窗口是临时控制台”的描述已过时。
 
 历史设计文档保留作为参考；实现行为以源码、[当前使用说明](desktop/README.md)和[验证记录](docs/desktop-pet/verification/README.md)为准。物理鼠标穿透、多屏 DPI、真实休眠、系统通知和开机启动仍需实机人工验收。

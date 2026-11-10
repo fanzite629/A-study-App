@@ -4,7 +4,7 @@
 
 const {
   app, BrowserWindow, Tray, Menu, screen, ipcMain, powerMonitor, Notification,
-  nativeImage, dialog, shell, protocol, net, clipboard,
+  nativeImage, dialog, shell, protocol, net, clipboard, safeStorage,
 } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -14,6 +14,9 @@ const geo = require('../shared/geometry');
 const { readJson, readState, writeJsonAtomic } = require('./persist');
 const { Core, petView } = require('./core');
 const { loadPack, listPacks } = require('./packs');
+const { Profiles } = require('./ai/profiles');
+const { Chats } = require('./ai/chats');
+const { ChatService } = require('./ai/service');
 
 // ------------------------------------------------------------------ startup
 
@@ -45,6 +48,9 @@ function main() {
   const STATE_FILE = path.join(DATA, 'state.json');
   const PREFS_FILE = path.join(DATA, 'pet-window.json');
   const LOG_FILE = path.join(DATA, 'desktop-log.txt');
+  const AI_FILE = path.join(DATA, 'ai-profiles.json');
+  const CHAT_DIR = path.join(DATA, 'chats');
+  const UI_INDEX = path.join(ROOT, 'ui-dist', 'index.html');
   const SELFTEST = flagValue('--selftest');
 
   // A fixed-size UI card shown when no character pack is loaded. It is not a
@@ -61,7 +67,8 @@ function main() {
   let packStatus = { status: 'missing', errors: [], warnings: [] };
   let layout = null;
   let pet = null;
-  let consoleWin = null;
+  let consoleWin = null;   // developer console (pet diagnostics)
+  let appWin = null;       // the T计划 main window
   let tray = null;
   let quitting = false;
   let hit = false;
@@ -85,6 +92,30 @@ function main() {
   const core = new Core({
     read: () => readState(STATE_FILE),
     write: (s) => writeJsonAtomic(STATE_FILE, s),
+    // Keep the untouched file before a schema upgrade rewrites it.
+    backup: (raw, from) => writeJsonAtomic(path.join(DATA, `before-schema-${from}-upgrade-${Date.now()}.json`), raw),
+  });
+
+  // ------------------------------------------------------------------ AI
+  // Keys are encrypted with the OS (DPAPI on Windows) and only ever decrypted
+  // here, in the main process. Requests go through Electron's network stack
+  // so the system proxy applies.
+
+  const profiles = new Profiles({
+    read: () => readJson(AI_FILE, null),
+    write: (d) => writeJsonAtomic(AI_FILE, d),
+    codec: {
+      available: () => safeStorage.isEncryptionAvailable(),
+      encrypt: (plain) => safeStorage.encryptString(plain).toString('base64'),
+      decrypt: (stored) => safeStorage.decryptString(Buffer.from(stored, 'base64')),
+    },
+  });
+  const chats = new Chats({ dir: CHAT_DIR, readJson, writeJson: writeJsonAtomic });
+  const appSend = (channel, data) => { if (appWin && !appWin.isDestroyed() && !appWin.webContents.isDestroyed()) appWin.webContents.send(channel, data); };
+  const chatService = new ChatService({
+    core, chats, profiles,
+    fetch: (url, init) => net.fetch(url, init),
+    emit: (ev) => appSend('chat:event', ev),
   });
 
   function savePrefs() {
@@ -203,6 +234,7 @@ function main() {
     const v = petView(core.S, Date.now());
     if (pet) petSend('pet:view', v);
     if (consoleWin && !consoleWin.isDestroyed()) consoleWin.webContents.send('console:update', consoleState());
+    appSend('app:update', appState());
   }
 
   function ensureVisible(reason) {
@@ -368,9 +400,60 @@ function main() {
     pet.setSkipTaskbar(true);
   }
 
-  // ------------------------------------------------------------ console window
+  // ------------------------------------------------------------ main window
 
+  const APP_PAGES = ['today', 'week', 'goals', 'review', 'chat', 'settings'];
+
+  /** The T计划 main window (React UI built into ui-dist). */
   function openMain(page) {
+    if (!APP_PAGES.includes(page)) page = undefined;
+    if (!fs.existsSync(UI_INDEX)) {
+      log('error', '主窗口界面还没有构建（缺少 ui-dist），已改为打开开发控制台。请运行 npm run build:ui');
+      return openConsole();
+    }
+    if (appWin && !appWin.isDestroyed()) {
+      if (appWin.isMinimized()) appWin.restore();
+      appWin.show(); appWin.focus();
+      if (page) appWin.webContents.send('app:goto', page);
+      return;
+    }
+    appWin = new BrowserWindow({
+      width: 1180, height: 800, minWidth: 860, minHeight: 560, show: false, title: 'T计划',
+      backgroundColor: '#FAF9F5',
+      webPreferences: {
+        preload: path.join(__dirname, '..', 'preload', 'app.js'),
+        contextIsolation: true, sandbox: true, nodeIntegration: false,
+      },
+    });
+    appWin.setMenuBarVisibility(false);
+    // Links in model answers open in the browser; the window itself never navigates away.
+    appWin.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:\/\//i.test(url)) shell.openExternal(url); return { action: 'deny' }; });
+    appWin.webContents.on('will-navigate', (e, url) => { e.preventDefault(); if (/^https?:\/\//i.test(url)) shell.openExternal(url); });
+    appWin.loadFile(UI_INDEX, page ? { hash: page } : undefined);
+    appWin.once('ready-to-show', () => appWin.show());
+    appWin.on('closed', () => {
+      appWin = null;
+      log('app', '主窗口已关闭；桌宠、计时和保存继续在后台运行');
+      if (!quitting && !mainCloseNoticeShown) {
+        mainCloseNoticeShown = true;
+        notice('T计划还在托盘里，计时和桌宠不受影响。');
+      }
+    });
+  }
+
+  function appState() {
+    return {
+      state: core.snapshot(),
+      now: Date.now(),
+      pet: { visible: petAlive() ? pet.isVisible() : false, quiet: prefs.quiet },
+      dataDir: DATA,
+      version: app.getVersion(),
+    };
+  }
+
+  // --------------------------------------------------------- developer console
+
+  function openConsole(page) {
     if (consoleWin && !consoleWin.isDestroyed()) {
       if (consoleWin.isMinimized()) consoleWin.restore();
       consoleWin.show(); consoleWin.focus();
@@ -388,14 +471,7 @@ function main() {
     consoleWin.setMenuBarVisibility(false);
     consoleWin.loadFile(path.join(__dirname, '..', 'renderer', 'console', 'index.html'), page ? { hash: page } : undefined);
     consoleWin.once('ready-to-show', () => consoleWin.show());
-    consoleWin.on('closed', () => {
-      consoleWin = null;
-      log('app', '主窗口已关闭；桌宠、计时和保存继续在后台运行');
-      if (!quitting && !mainCloseNoticeShown) {
-        mainCloseNoticeShown = true;
-        notice('T计划还在托盘里，计时和桌宠不受影响。');
-      }
-    });
+    consoleWin.on('closed', () => { consoleWin = null; });
   }
 
   function consoleState() {
@@ -471,6 +547,7 @@ function main() {
     const h = currentHeight();
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: '打开 T计划', click: () => openMain() },
+      { label: '和 AI 聊聊', click: () => openMain('chat') },
       { type: 'separator' },
       { label: '显示桌宠', type: 'checkbox', checked: !!(pet && pet.isVisible()), click: (i) => (i.checked ? showPet('tray') : hidePet('tray')) },
       { label: '始终置顶', type: 'checkbox', checked: prefs.alwaysOnTop, click: (i) => setAlwaysOnTop(i.checked) },
@@ -504,6 +581,7 @@ function main() {
         app.setLoginItemSettings({ openAtLogin: i.checked, path: loginExecutable(), args: loginArgs() });
         log('app', `开机自动启动 = ${i.checked}`);
       } },
+      { label: '开发控制台（桌宠诊断）', click: () => openConsole() },
       { label: '退出 T计划', click: () => app.quit() },
     ]));
   }
@@ -512,6 +590,7 @@ function main() {
     const h = currentHeight();
     Menu.buildFromTemplate([
       { label: '打开 T计划', click: () => openMain() },
+      { label: '和 AI 聊聊', click: () => openMain('chat') },
       { label: '今天回看', click: () => petSend('pet:event',{type:'review'}) },
       { type: 'separator' },
       { label: '安静模式', type: 'checkbox', checked: prefs.quiet, click: (i) => setMode('quiet', i.checked) },
@@ -569,8 +648,9 @@ function main() {
   });
   ipcMain.handle('core:dispatch', (_e, cmd) => core.dispatch(cmd));
   ipcMain.handle('console:get', () => consoleState());
-  ipcMain.handle('console:export-data', async () => {
-    const r = await dialog.showSaveDialog(consoleWin || pet, {defaultPath:'T计划备份.json',filters:[{name:'JSON',extensions:['json']}]});
+  const senderWindow = (e) => BrowserWindow.fromWebContents(e.sender) || appWin || consoleWin || pet;
+  ipcMain.handle('console:export-data', async (e) => {
+    const r = await dialog.showSaveDialog(senderWindow(e), {defaultPath:'T计划备份.json',filters:[{name:'JSON',extensions:['json']}]});
     if (r.canceled) return {ok:false,canceled:true};
     try {writeJsonAtomic(r.filePath,core.snapshot());return {ok:true};}catch(e){return {ok:false,error:e.message};}
   });
@@ -580,22 +660,52 @@ function main() {
     clipboard.writeText(JSON.stringify(s, null, 2));
     return true;
   });
-  ipcMain.handle('console:import', async () => {
-    const r = await dialog.showOpenDialog(consoleWin, { title: '导入 T计划 导出的 JSON', properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
+  ipcMain.handle('console:import', async (e) => {
+    const parent = senderWindow(e);
+    const r = await dialog.showOpenDialog(parent, { title: '导入 T计划 导出的 JSON', properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
     if (r.canceled || !r.filePaths[0]) return { ok: false, canceled: true };
     let obj;
     try { obj = JSON.parse(fs.readFileSync(r.filePaths[0], 'utf8').replace(/^﻿/, '')); } catch (e) { return { ok: false, error: '文件不是有效的 JSON：' + e.message }; }
     // The web app's export may wrap the state; accept both shapes.
     const state = Array.isArray(obj.tasks) ? obj : (obj.state || obj.data || obj.S || obj);
     if (!Array.isArray(state.tasks)) return {ok:false,error:'导出文件缺少 tasks。'};
-    const answer = await dialog.showMessageBox(consoleWin, {type:'question', title:'导入学习记录', message:'用这份文件替换当前任务和历史记录？', detail:'当前数据会另存为导入前备份，正在进行的计时会保留。', buttons:['取消','导入'], defaultId:0, cancelId:0});
+    const answer = await dialog.showMessageBox(parent, {type:'question', title:'导入学习记录', message:'用这份文件替换当前任务和历史记录？', detail:'当前数据会另存为导入前备份，正在进行的计时会保留。', buttons:['取消','导入'], defaultId:0, cancelId:0});
     if (answer.response !== 1) return {ok:false,canceled:true};
     writeJsonAtomic(path.join(DATA,'before-import-'+Date.now()+'.json'),core.snapshot());
     return core.dispatch({ type: 'data.import', payload: { state } });
   });
+  // ---- main window: full data, read-only queries, model profiles, chat
+
+  ipcMain.handle('app:get', () => appState());
+  ipcMain.handle('app:query', (_e, name, args) => core.query(name, args));
+
+  ipcMain.handle('ai:profiles', () => profiles.list());
+  ipcMain.handle('ai:save-profile', (_e, input) => profiles.save(input || {}));
+  ipcMain.handle('ai:remove-profile', (_e, id) => profiles.remove(id));
+  ipcMain.handle('ai:set-active', (_e, id) => profiles.setActive(id));
+  ipcMain.handle('ai:test-profile', async (_e, id) => {
+    const r = await chatService.testProfile(id);
+    log('ai', `连通测试：${r.ok ? '成功' : '失败'}，工具调用：${r.tools ? '支持' : '不支持'}`, { error: r.error, toolsNote: r.toolsNote });
+    return r;
+  });
+
+  ipcMain.handle('chat:list', () => chats.list());
+  ipcMain.handle('chat:create', () => chats.create());
+  ipcMain.handle('chat:load', (_e, id) => { const c = chats.load(id); return c ? { ...c, running: chatService.isRunning(id) } : null; });
+  ipcMain.handle('chat:remove', (_e, id) => { chatService.stop(id); return chats.remove(id); });
+  ipcMain.handle('chat:send', (_e, p) => chatService.send(p || {}));
+  ipcMain.handle('chat:stop', (_e, id) => chatService.stop(id));
+  ipcMain.handle('chat:decide', (_e, p) => {
+    const r = chatService.decide(p || {});
+    if (r.proposal) log('ai', `提议「${r.proposal.title}」：${r.proposal.status}`);
+    return r;
+  });
+  ipcMain.handle('review:draft', (_e, p) => chatService.draftReview(p || {}));
+
   ipcMain.on('app:action', (_e, name, arg) => {
     const actions = {
       'open-main': () => openMain(arg),
+      'open-console': () => openConsole(arg),
       'show-review': () => petSend('pet:event',{type:'review'}),
       'show-pet': () => showPet('console'),
       'hide-pet': () => hidePet('console'),
@@ -654,6 +764,12 @@ function main() {
     fs.mkdirSync(CHAR_DIR, { recursive: true });
     writeCharactersReadme(CHAR_DIR);
 
+    // Automated tests on Linux have no keyring. With a throwaway --test-data
+    // profile only, let safeStorage use Chromium's built-in fallback key.
+    if (process.platform === 'linux' && flagValue('--test-data') && safeStorage.setUsePlainTextEncryption) {
+      safeStorage.setUsePlainTextEncryption(true);
+    }
+
     core.load();
     setInterval(() => core.heartbeat(), 10000);
     setInterval(() => core.checkReminders(prefs.quiet), 30000);
@@ -664,6 +780,7 @@ function main() {
     createTray();
     createPet();
     if (flag('--main') || (!app.isPackaged && !flag('--pet-only'))) openMain();
+    if (flag('--console')) openConsole();
 
     powerMonitor.on('suspend', () => { log('power', '系统休眠'); core.autoPause('sleep'); });
     powerMonitor.on('resume', () => { log('power', '系统唤醒'); ensureVisible('resume'); });

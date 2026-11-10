@@ -46,7 +46,7 @@ npm run selftest:nopack
 npm run dist
 ```
 
-`npm start` 同时打开临时控制台；发行 EXE 默认只开桌宠，可加 `--main`。打包输出在 `desktop/dist`，不提交 Git。
+`npm start` 先构建界面再打开主窗口；发行 EXE 默认只开桌宠，可加 `--main`。打包输出在 `desktop/dist`，不提交 Git。
 
 `src/main/core.js` 管数据；`src/main/main.js` 管窗口和 IPC；`src/preload` 提供受限桥接；`src/renderer/pet` 管角色和气泡；`assets/characters/warm-scholar` 是正式素材；`src/renderer/console` 是临时控制台。
 
@@ -54,8 +54,27 @@ Windows 自动化启动真实 Electron，验证素材、气泡操作、跨窗口
 
 仍须人工实机验收：穿透到另一应用、原生拖拽手感、多屏 DPI 与插拔、真实休眠、通知交付和开机启动。逻辑单测不能代替这些检查。
 
+## 主窗口与 AI
+
+主窗口界面在 `ui/`（Vite + React + TypeScript），构建到 `ui-dist/` 后由 Electron 从本地加载。`npm start`、`npm run dist` 会先构建。
+
+| 模块 | 职责 |
+|---|---|
+| `src/main/plan.js` | 目标树、周计划、复盘的命令和只读查询。事实（时长、段数）每次从记录计算，不落盘 |
+| `src/main/ai/provider.js` | OpenAI 兼容接口的流式客户端：SSE 解析、工具调用拼接、错误归类、连通与工具调用检测 |
+| `src/main/ai/profiles.js` | 模型配置。密钥经 `safeStorage` 加密保存在 `ai-profiles.json`，`list()` 不返回密钥 |
+| `src/main/ai/chats.js` | 每个会话一个追加写入的 JSONL 文件，位于 `chats/`，不进入 `state.json` |
+| `src/main/ai/tools.js` | 工具注册表。新增能力只需登记一个工具 |
+| `src/main/ai/service.js` | Agent 循环（每轮最多 8 次模型调用）、提议的确认与执行、复盘草稿 |
+
+写入流程：模型调用 `propose_*` 工具 → 用 `Core.check()` 试运行，不合法就把错误返回给模型 → 合法则存为待确认提议并显示卡片 → 用户确认后 `Core.dispatch()` 执行一次。提议的最新状态会在下一次请求时告诉模型。
+
+新增命令：`task.update`、`task.delete`、`task.addMany`、`goal.add / update / delete / applyDraft`、`week.update / applyDraft`、`review.save / setDraft / clearDraft`。新增查询（`core.query`）：`day.facts`、`week.facts`、`week.view`、`goal.tree`、`week.recent`。
+
+`npm run test:app` 会启动真实 Electron 和一个本地假模型服务，跑通计时、目标、模型配置、Agent 提议与确认、周计划、复盘。Linux 下需要虚拟显示：`xvfb-run -a npm run test:app`。
+
 ## 与平台的分工
 
-完整 T计划 v4.0 HTML 尚未接入，主窗口仍是共享后台的临时控制台。Claude 负责平台迁移，见 `docs/desktop-pet/integration-handoff.md`。
+主窗口已重新设计并接入共享后台，没有移植 T计划 v4.0 HTML。原临时控制台保留为开发控制台（托盘菜单或 `--console`）。`docs/desktop-pet/integration-handoff.md` 写于重构之前，仅作历史参考。
 
-本版动作是状态立绘切换、眨眼和轻微呼吸，尚无 Live2D、逐帧走路、坐下、联网 AI 对话、全屏自动静音。`sequence` / `layered` 仍为预留类型。
+本版动作是状态立绘切换、眨眼和轻微呼吸，尚无 Live2D、逐帧走路、坐下、全屏自动静音。`sequence` / `layered` 仍为预留类型。

@@ -1,3 +1,5 @@
 node_modules/
 selftest-out*/
+ui-dist/
+test-output/
 *.log

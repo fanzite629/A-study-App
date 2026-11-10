@@ -8,6 +8,11 @@
 // fields live under `desktop` so they never collide with the web app's fields.
 
 const { EventEmitter } = require('node:events');
+const plan = require('./plan');
+
+// Data schema. 1 = the original pet build (tasks / sessions only).
+// 2 = adds goals, week plans, reviews, and goalId / week / origin on tasks.
+const SCHEMA = 2;
 
 const MIN = 60000;
 const DUE_AUTO_FINALIZE_MS = 15 * MIN;  // unanswered time-up closes the round
@@ -19,8 +24,9 @@ const uid = (p, now) => p + '_' + now.toString(36) + Math.random().toString(36).
 
 function emptyState() {
   return {
-    app: 'tplan', v: 1, sample: false,
+    app: 'tplan', v: 1, schema: SCHEMA, sample: false,
     tasks: [], main: {}, sessions: [], notes: [], trees: [],
+    goals: [], weeks: {}, reviews: [],
     active: null, archive: null, settings: { cap: 180 },
     desktop: { rev: 0, rest: null, reminder: null, lastEnded: null, nudges: {day:'',count:0,seen:[]} },
   };
@@ -31,12 +37,30 @@ function normalize(o) {
   const e = emptyState();
   o = o && typeof o === 'object' ? o : {};
   for (const k of Object.keys(e)) if (o[k] === undefined) o[k] = e[k];
-  for (const k of ['tasks', 'sessions', 'notes', 'trees']) if (!Array.isArray(o[k])) o[k] = [];
+  for (const k of ['tasks', 'sessions', 'notes', 'trees', 'goals', 'reviews']) if (!Array.isArray(o[k])) o[k] = [];
+  if (!o.weeks || typeof o.weeks !== 'object' || Array.isArray(o.weeks)) o.weeks = {};
   if (!o.settings || typeof o.settings !== 'object') o.settings = { cap: 180 };
   if (!o.main || typeof o.main !== 'object') o.main = {};
   if (!o.desktop || typeof o.desktop !== 'object') o.desktop = e.desktop;
   for (const k of Object.keys(e.desktop)) if (o.desktop[k] === undefined) o.desktop[k] = e.desktop[k];
   delete o.ui;
+  return o;
+}
+
+/**
+ * Bring normalized data up to the current schema. Only adds fields and drops
+ * links that point at nothing; it never removes tasks or sessions.
+ */
+function migrate(o) {
+  const goalIds = new Set(o.goals.map((g) => g.id));
+  for (const t of o.tasks) {
+    if (t.goalId === undefined || (t.goalId && !goalIds.has(t.goalId))) t.goalId = null;
+    if (t.week === undefined) t.week = null;
+    if (t.origin === undefined) t.origin = 'user';
+  }
+  for (const g of o.goals) if (g.parentId && !goalIds.has(g.parentId)) g.parentId = null;
+  for (const w of Object.values(o.weeks)) w.goalIds = (w.goalIds || []).filter((id) => goalIds.has(id));
+  o.schema = SCHEMA;
   return o;
 }
 
@@ -56,6 +80,8 @@ class Core extends EventEmitter {
    * @param {(h: any) => void} [deps.clearTimer]
    * @param {() => object|null} deps.read          load persisted state
    * @param {(state: object) => void} deps.write   persist state (atomic)
+   * @param {(raw: object, fromSchema: number) => void} [deps.backup]
+   *        called with the untouched data before a schema upgrade rewrites it
    */
   constructor(deps) {
     super();
@@ -64,6 +90,7 @@ class Core extends EventEmitter {
     this.clearTimer = deps.clearTimer || ((h) => clearTimeout(h));
     this.read = deps.read;
     this.write = deps.write;
+    this.backup = deps.backup || null;
     this.timers = { due: null, finalize: null, rest: null };
     this.pendingEvents = [];
     this.S = emptyState();
@@ -73,7 +100,10 @@ class Core extends EventEmitter {
 
   load() {
     const raw = this.read(); // corrupted data must not silently become an empty database
-    this.S = normalize(raw);
+    const from = raw && typeof raw === 'object' ? Number(raw.schema) || 1 : SCHEMA;
+    if (from > SCHEMA) throw new Error('学习数据来自更新版本的 T计划，请升级程序后再打开。');
+    if (raw && from < SCHEMA && this.backup) this.backup(raw, from);
+    this.S = migrate(normalize(raw));
     this.recoverOnStart();
     this.persist();
   }
@@ -128,6 +158,27 @@ class Core extends EventEmitter {
     }
   }
 
+  /**
+   * Would this command succeed? Runs it against the live state and then puts
+   * the state back, so nothing is saved and no event is emitted. Used to
+   * validate an agent proposal before showing it to the user.
+   */
+  check(cmd) {
+    const h = this.handlers[cmd && cmd.type];
+    if (!h) return { ok: false, error: `未知命令：${cmd && cmd.type}` };
+    const saved = JSON.stringify(this.S);
+    const events = this.pendingEvents.length;
+    try {
+      const r = h.call(this, (cmd && cmd.payload) || {}) || {};
+      return r.ok === false ? r : { ok: true, ...r };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    } finally {
+      this.S = JSON.parse(saved);
+      this.pendingEvents.length = events;
+    }
+  }
+
   get handlers() {
     return {
       'task.add': this.cmdTaskAdd,
@@ -147,19 +198,35 @@ class Core extends EventEmitter {
       'rest.end': this.cmdRestEnd,
       'reminder.dismiss': this.cmdReminderDismiss,
       'data.import': this.cmdImport,
+      ...plan.handlers,
     };
   }
 
   task(id) { return this.S.tasks.find((t) => t.id === id) || null; }
 
+  /** Read-only questions about the data (facts, week view, goal tree). */
+  query(name, args) {
+    const q = plan.queries[name];
+    if (!q) return { ok: false, error: `未知查询：${name}` };
+    try {
+      return { ok: true, data: JSON.parse(JSON.stringify(q(this.S, args || {}))) };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+
   cmdTaskAdd(p) {
     const title = String(p.title || '').trim().slice(0, 150);
     if (!title) return { ok: false, error: '任务标题不能为空' };
     const now = this.now();
+    if (p.goalId && !plan.goalById(this.S, p.goalId)) return { ok: false, error: '找不到这个目标' };
+    if (p.date && !plan.isDate(p.date)) return { ok: false, error: '日期格式不正确' };
+    if (p.week && !plan.isDate(p.week)) return { ok: false, error: '周的日期格式不正确' };
     const t = {
       id: uid('t', now), title, cat: p.cat || 'other', date: p.date === null ? null : (p.date || dateOfMs(now)),
       at: /^([01]\d|2[0-3]):[0-5]\d$/.test(p.at || '') ? p.at : null, est: Number(p.est) > 0 ? Math.min(600,Math.round(p.est)) : 30, done: false, doneAt: null, pin: false,
       createdAt: now, tree: null, check: false, legacy: null, next: null, nextAt: null,
+      goalId: p.goalId || null, week: p.week ? plan.weekStartOf(p.week) : null, origin: p.origin === 'agent' ? 'agent' : 'user',
     };
     this.S.tasks.push(t);
     if (p.setMain) this.S.main[dateOfMs(now)] = t.id;
@@ -177,7 +244,7 @@ class Core extends EventEmitter {
   cmdTaskSchedule(p) {
     const t = this.task(p.taskId);
     if (!t) return {ok:false,error:'找不到这个任务'};
-    if (p.date !== null && !/^\d{4}-\d{2}-\d{2}$/.test(p.date || '')) return {ok:false,error:'日期格式不正确'};
+    if (p.date !== null && !plan.isDate(p.date)) return {ok:false,error:'日期格式不正确'};
     t.date = p.date;
     if (p.at !== undefined) t.at = /^([01]\d|2[0-3]):[0-5]\d$/.test(p.at || '') ? p.at : null;
     return {};
@@ -343,7 +410,9 @@ class Core extends EventEmitter {
       return { ok: false, error: '不是有效的 T计划 导出文件（缺少 tasks）' };
     }
     const keep = { active: this.S.active, desktop: this.S.desktop };
-    const next = normalize(JSON.parse(JSON.stringify(src)));
+    const from = Number(src.schema) || 1;
+    if (from > SCHEMA) return { ok: false, error: '这份文件来自更新版本的 T计划，请升级程序后再导入。' };
+    const next = migrate(normalize(JSON.parse(JSON.stringify(src))));
     next.active = keep.active;     // never interrupt the current round
     next.desktop = keep.desktop;
     this.S = next;
@@ -504,4 +573,4 @@ function petView(S, now) {
   };
 }
 
-module.exports = { Core, normalize, elapsed, petView, dateOfMs, MIN, DUE_AUTO_FINALIZE_MS };
+module.exports = { Core, SCHEMA, normalize, migrate, elapsed, petView, dateOfMs, MIN, DUE_AUTO_FINALIZE_MS };

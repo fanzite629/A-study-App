@@ -3,32 +3,56 @@
   "version": "0.1.0",
   "author": "T计划",
   "private": true,
-  "description": "T计划 desktop pet (Windows): pet window, shared timer/records core, character resource packs",
+  "description": "T计划 desktop (Windows): pet window, main window (plan / review / AI chat), shared timer and records core",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "electron .",
+    "build:ui": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "start": "npm run build:ui && electron .",
     "start:pet": "electron . --pet-only",
     "start:testpack": "electron . --pack=dev-fixtures/test-pack",
     "start:nogpu": "electron . --no-gpu",
     "test": "node --test \"test/*.test.js\"",
+    "test:app": "npm run build:ui && node test/app-smoke.cjs",
     "selftest": "electron . --pet-only --pack=dev-fixtures/test-pack --selftest=selftest-out",
     "selftest:nopack": "electron . --pet-only --no-default-pack --selftest=selftest-out-nopack",
-    "test:windows": "node test/windows-smoke.cjs",
-    "dist": "electron-builder --win portable",
-    "pack": "electron-builder --win dir"
+    "test:windows": "npm run build:ui && node test/windows-smoke.cjs",
+    "dist": "npm run build:ui && electron-builder --win portable",
+    "pack": "npm run build:ui && electron-builder --win dir"
   },
   "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
     "electron": "45.2.1",
     "electron-builder": "26.18.0",
     "playwright": "1.64.1",
-    "pngjs": "7.0.0"
+    "pngjs": "7.0.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.7"
   },
   "build": {
     "appId": "com.tplan.desktop",
     "productName": "T计划桌宠",
-    "files": ["src/**/*", "assets/**/*", "package.json"],
-    "directories": {"output": "dist"},
-    "win": {"target": "portable", "signAndEditExecutable": false},
-    "portable": {"artifactName": "TPlan-Pet-${version}-Windows.exe"}
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "ui-dist/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "TPlan-Pet-${version}-Windows.exe"
+    }
   }
 }

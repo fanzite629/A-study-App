@@ -1,0 +1,10 @@
+{
+  "format": "tplan-character-pack",
+  "formatVersion": 1,
+  "id": "broken",
+  "name": "故意损坏的测试包",
+  "version": "0.0.1",
+  "canvas": { "width": 900, "height": 1200 },
+  "anchor": { "x": 450, "footY": 1180 },
+  "states": { "idle": "does-not-exist.png" }
+}

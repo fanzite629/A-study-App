@@ -1,0 +1,62 @@
+{
+  "format": "tplan-character-pack",
+  "formatVersion": 1,
+  "id": "tplan-warm-scholar",
+  "name": "T计划 · 暖阳学者",
+  "version": "1.0.0",
+  "author": "用户角色参考 / GPT 图像生成",
+  "canvas": {
+    "width": 1024,
+    "height": 1536
+  },
+  "anchor": {
+    "x": 512,
+    "footY": 1490
+  },
+  "display": {
+    "defaultHeight": 320,
+    "figureTop": 10
+  },
+  "hit": {
+    "alphaThreshold": 40,
+    "dilatePx": 4
+  },
+  "states": {
+    "idle": {
+      "type": "static",
+      "src": "states/idle.png"
+    },
+    "focus": {
+      "type": "static",
+      "src": "states/focus.png"
+    },
+    "thinking": {
+      "type": "static",
+      "src": "states/thinking.png"
+    },
+    "reminder": {
+      "type": "static",
+      "src": "states/reminder.png"
+    },
+    "timeUp": {
+      "type": "static",
+      "src": "states/timeUp.png"
+    },
+    "done": {
+      "type": "static",
+      "src": "states/done.png"
+    },
+    "rest": {
+      "type": "static",
+      "src": "states/rest.png"
+    },
+    "dragging": {
+      "type": "static",
+      "src": "states/dragging.png"
+    },
+    "blink": {
+      "type": "static",
+      "src": "states/blink.png"
+    }
+  }
+}

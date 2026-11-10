@@ -1,0 +1,423 @@
+{
+  "at": "2026-11-02T07:15:38.791Z",
+  "failed": 0,
+  "results": [
+    {
+      "name": "pack loads and idle image is displayed",
+      "pass": true,
+      "detail": {
+        "state": "idle",
+        "assetState": "idle",
+        "layout": {
+          "figureHeight": 260,
+          "scale": 0.22787028921998248,
+          "winW": 624,
+          "winH": 421,
+          "img": {
+            "x": 209.4583698510079,
+            "y": 141.55565293602103,
+            "w": 205.08326029798422,
+            "h": 273.44434706397897
+          },
+          "foot": {
+            "x": 312,
+            "y": 410.44259421560037
+          },
+          "fig": {
+            "x": 232.9290096406661,
+            "y": 150.44259421560034,
+            "w": 144.2418930762489,
+            "h": 260
+          },
+          "side": "left",
+          "packLoaded": true
+        },
+        "packLoaded": true,
+        "card": null
+      }
+    },
+    {
+      "name": "opaque pixel on the figure is hit",
+      "pass": true,
+      "detail": {
+        "hit": true,
+        "figure": true
+      }
+    },
+    {
+      "name": "transparent window corner passes through",
+      "pass": true,
+      "detail": {
+        "hit": false,
+        "figure": false
+      }
+    },
+    {
+      "name": "transparent canvas area next to the feet passes through",
+      "pass": true,
+      "detail": {
+        "hit": false,
+        "figure": false
+      }
+    },
+    {
+      "name": "timer starts from the shared core",
+      "pass": true,
+      "detail": {
+        "ok": true,
+        "activeId": "s_mvyxcs6y2852c"
+      }
+    },
+    {
+      "name": "running timer -> state focus, focus asset shown",
+      "pass": true,
+      "detail": {
+        "state": "focus",
+        "assetState": "focus",
+        "layout": {
+          "figureHeight": 260,
+          "scale": 0.22787028921998248,
+          "winW": 624,
+          "winH": 421,
+          "img": {
+            "x": 209.4583698510079,
+            "y": 141.55565293602103,
+            "w": 205.08326029798422,
+            "h": 273.44434706397897
+          },
+          "foot": {
+            "x": 312,
+            "y": 410.44259421560037
+          },
+          "fig": {
+            "x": 232.9290096406661,
+            "y": 150.44259421560034,
+            "w": 144.2418930762489,
+            "h": 260
+          },
+          "side": "left",
+          "packLoaded": true
+        },
+        "packLoaded": true,
+        "card": null
+      }
+    },
+    {
+      "name": "DOM: exactly one character image visible, and it is focus.png",
+      "pass": true,
+      "detail": {
+        "imgs": [
+          {
+            "src": "idle.png",
+            "visible": false,
+            "w": 0,
+            "h": 0,
+            "nw": 900,
+            "nh": 1200
+          },
+          {
+            "src": "focus.png",
+            "visible": true,
+            "w": 205.0729217529297,
+            "h": 273.4375,
+            "nw": 900,
+            "nh": 1200
+          }
+        ],
+        "chip": true,
+        "bubble": false,
+        "bubbleText": ""
+      }
+    },
+    {
+      "name": "DOM: image keeps its aspect ratio",
+      "pass": true,
+      "detail": [
+        {
+          "src": "focus.png",
+          "visible": true,
+          "w": 205.0729217529297,
+          "h": 273.4375,
+          "nw": 900,
+          "nh": 1200
+        }
+      ]
+    },
+    {
+      "name": "DOM: timer chip is shown while timing",
+      "pass": true,
+      "detail": {
+        "imgs": [
+          {
+            "src": "idle.png",
+            "visible": false,
+            "w": 0,
+            "h": 0,
+            "nw": 900,
+            "nh": 1200
+          },
+          {
+            "src": "focus.png",
+            "visible": true,
+            "w": 205.0729217529297,
+            "h": 273.4375,
+            "nw": 900,
+            "nh": 1200
+          }
+        ],
+        "chip": true,
+        "bubble": false,
+        "bubbleText": ""
+      }
+    },
+    {
+      "name": "a second timer is refused",
+      "pass": true,
+      "detail": {
+        "ok": false,
+        "error": "先结束当前这一轮",
+        "activeId": "s_mvyxcs6y2852c"
+      }
+    },
+    {
+      "name": "broken pack is rejected and the previous pack stays",
+      "pass": true,
+      "detail": {
+        "ok": false,
+        "i": {
+          "state": "focus",
+          "assetState": "focus",
+          "layout": {
+            "figureHeight": 260,
+            "scale": 0.22787028921998248,
+            "winW": 624,
+            "winH": 421,
+            "img": {
+              "x": 209.4583698510079,
+              "y": 141.55565293602103,
+              "w": 205.08326029798422,
+              "h": 273.44434706397897
+            },
+            "foot": {
+              "x": 312,
+              "y": 410.44259421560037
+            },
+            "fig": {
+              "x": 232.9290096406661,
+              "y": 150.44259421560034,
+              "w": 144.2418930762489,
+              "h": 260
+            },
+            "side": "left",
+            "packLoaded": true
+          },
+          "packLoaded": true,
+          "card": null
+        },
+        "status": {
+          "status": "error-kept-previous",
+          "dir": "D:\\数学建模\\T计划\\repo\\desktop\\dev-fixtures\\broken-pack",
+          "errors": [
+            "找不到 idle 的图片：does-not-exist.png"
+          ],
+          "warnings": [
+            "以下状态没有素材，将显示 idle：focus, dragging, thinking, reminder, timeUp, done, rest"
+          ],
+          "keptPack": "开发测试素材（非正式角色） 0.0.1"
+        }
+      }
+    },
+    {
+      "name": "pack failure does not interrupt the timer",
+      "pass": true
+    },
+    {
+      "name": "reloading the pack keeps the timer and state",
+      "pass": true,
+      "detail": {
+        "state": "focus",
+        "assetState": "focus",
+        "layout": {
+          "figureHeight": 260,
+          "scale": 0.22787028921998248,
+          "winW": 624,
+          "winH": 421,
+          "img": {
+            "x": 209.4583698510079,
+            "y": 141.55565293602103,
+            "w": 205.08326029798422,
+            "h": 273.44434706397897
+          },
+          "foot": {
+            "x": 312,
+            "y": 410.44259421560037
+          },
+          "fig": {
+            "x": 232.9290096406661,
+            "y": 150.44259421560034,
+            "w": 144.2418930762489,
+            "h": 260
+          },
+          "side": "left",
+          "packLoaded": true
+        },
+        "packLoaded": true,
+        "card": null
+      }
+    },
+    {
+      "name": "resize keeps the foot anchor in place",
+      "pass": true,
+      "detail": {
+        "footBefore": {
+          "x": 2471,
+          "y": 1368
+        },
+        "footAfter": {
+          "x": 2471,
+          "y": 1368
+        }
+      }
+    },
+    {
+      "name": "hit testing follows the new size",
+      "pass": true,
+      "detail": {
+        "c2": {
+          "hit": true,
+          "figure": true
+        },
+        "figH": 320
+      }
+    },
+    {
+      "name": "ending the timer leaves focus",
+      "pass": true,
+      "detail": {
+        "state": "idle",
+        "assetState": "idle",
+        "layout": {
+          "figureHeight": 260,
+          "scale": 0.22787028921998248,
+          "winW": 624,
+          "winH": 421,
+          "img": {
+            "x": 209.4583698510079,
+            "y": 141.55565293602103,
+            "w": 205.08326029798422,
+            "h": 273.44434706397897
+          },
+          "foot": {
+            "x": 312,
+            "y": 410.44259421560037
+          },
+          "fig": {
+            "x": 232.9290096406661,
+            "y": 150.44259421560034,
+            "w": 144.2418930762489,
+            "h": 260
+          },
+          "side": "left",
+          "packLoaded": true
+        },
+        "packLoaded": true,
+        "card": null
+      }
+    },
+    {
+      "name": "rest without an asset shows idle",
+      "pass": true,
+      "detail": {
+        "state": "rest",
+        "assetState": "idle",
+        "layout": {
+          "figureHeight": 260,
+          "scale": 0.22787028921998248,
+          "winW": 624,
+          "winH": 421,
+          "img": {
+            "x": 209.4583698510079,
+            "y": 141.55565293602103,
+            "w": 205.08326029798422,
+            "h": 273.44434706397897
+          },
+          "foot": {
+            "x": 312,
+            "y": 410.44259421560037
+          },
+          "fig": {
+            "x": 232.9290096406661,
+            "y": 150.44259421560034,
+            "w": 144.2418930762489,
+            "h": 260
+          },
+          "side": "left",
+          "packLoaded": true
+        },
+        "packLoaded": true,
+        "card": null
+      }
+    },
+    {
+      "name": "clicking the character opens the task card (thinking -> idle asset)",
+      "pass": true,
+      "detail": {
+        "state": "thinking",
+        "assetState": "idle",
+        "layout": {
+          "figureHeight": 260,
+          "scale": 0.22787028921998248,
+          "winW": 624,
+          "winH": 421,
+          "img": {
+            "x": 209.4583698510079,
+            "y": 141.55565293602103,
+            "w": 205.08326029798422,
+            "h": 273.44434706397897
+          },
+          "foot": {
+            "x": 312,
+            "y": 410.44259421560037
+          },
+          "fig": {
+            "x": 232.9290096406661,
+            "y": 150.44259421560034,
+            "w": 144.2418930762489,
+            "h": 260
+          },
+          "side": "left",
+          "packLoaded": true
+        },
+        "packLoaded": true,
+        "card": "main"
+      }
+    },
+    {
+      "name": "DOM: bubble is shown with the task card",
+      "pass": true,
+      "detail": {
+        "imgs": [
+          {
+            "src": "idle.png",
+            "visible": true,
+            "w": 205.0729217529297,
+            "h": 273.4375,
+            "nw": 900,
+            "nh": 1200
+          },
+          {
+            "src": "focus.png",
+            "visible": false,
+            "w": 0,
+            "h": 0,
+            "nw": 900,
+            "nh": 1200
+          }
+        ],
+        "chip": false,
+        "bubble": true,
+        "bubbleText": "×\n自测任务：先看第一道例题\n先做一点点就好。\n▶ 先做 5 分钟\n▶ 10 分钟\n▶ 按计划 30′\n缩小一点\n换一件\n今天回看\n正计时\n休息 5 分钟"
+      }
+    }
+  ]
+}

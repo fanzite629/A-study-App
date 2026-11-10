@@ -1,0 +1,22 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { readState, writeJsonAtomic } = require('../src/main/persist');
+test('corrupt primary recovers from last valid backup without replacing it', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tplan-persist-test-'));
+  t.after(() => fs.rmSync(dir, {recursive:true, force:true}));
+  const file = path.join(dir, 'state.json');
+  assert.equal(readState(file), null);
+  writeJsonAtomic(file, {sessions:[{id:'s1'}]});
+  writeJsonAtomic(file, {sessions:[{id:'s1'}, {id:'s2'}]});
+  fs.writeFileSync(file, 'broken');
+  assert.deepEqual(readState(file), {sessions:[{id:'s1'}]});
+  writeJsonAtomic(file, readState(file));
+  assert.deepEqual(JSON.parse(fs.readFileSync(file+'.backup')), {sessions:[{id:'s1'}]});
+  fs.writeFileSync(file, 'broken');
+  fs.writeFileSync(file+'.backup', 'broken');
+  assert.throws(() => readState(file), /均无法读取/);
+});

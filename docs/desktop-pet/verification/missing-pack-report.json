@@ -1,0 +1,72 @@
+{
+  "at": "2026-11-02T07:16:06.031Z",
+  "mode": "missing-pack",
+  "failed": 0,
+  "results": [
+    {
+      "name": "missing pack: notice card is shown with a reason",
+      "pass": true,
+      "detail": {
+        "shown": true,
+        "text": "未加载角色素材\n请把资源包放进角色资源文件夹，或从托盘「角色资源包」中选择。\n选择资源包…\n打开资源文件夹"
+      }
+    },
+    {
+      "name": "missing pack: no character image is drawn as a substitute",
+      "pass": true,
+      "detail": {
+        "imgs": 0
+      }
+    },
+    {
+      "name": "missing pack: the card can be grabbed (hit)",
+      "pass": true,
+      "detail": {
+        "hit": true,
+        "figure": false
+      }
+    },
+    {
+      "name": "missing pack: empty window area passes through",
+      "pass": true,
+      "detail": {
+        "hit": false,
+        "figure": false
+      }
+    },
+    {
+      "name": "missing pack: timer and states still work",
+      "pass": true,
+      "detail": {
+        "state": "focus",
+        "assetState": null,
+        "layout": {
+          "figureHeight": 132,
+          "scale": 1,
+          "winW": 317,
+          "winH": 288,
+          "img": {
+            "x": 28.5,
+            "y": 150,
+            "w": 260,
+            "h": 132
+          },
+          "foot": {
+            "x": 158.5,
+            "y": 282
+          },
+          "fig": {
+            "x": 28.5,
+            "y": 150,
+            "w": 260,
+            "h": 132
+          },
+          "side": "left",
+          "packLoaded": false
+        },
+        "packLoaded": false,
+        "card": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "version": "0.1.0",
+  "release_url": "https://github.com/fanzite629/A-study-App/releases/tag/v0.1.0",
+  "rebuilt": false,
+  "assets": [
+    {
+      "file": "TPlan-Pet-0.1.0-Windows.exe",
+      "bytes": 131974708,
+      "sha256": "6064c825d703805b0d6e4b524a60ddf35a31db95b06649e0fb12bf50fba8f8e8",
+      "download_url": "https://github.com/fanzite629/A-study-App/releases/download/v0.1.0/TPlan-Pet-0.1.0-Windows.exe"
+    },
+    {
+      "file": "暖阳学者-完整角色包.zip",
+      "bytes": 21781135,
+      "sha256": "9f59b5fe497fbc50f4fee43932a6d7179dde98dfb940d62633690d9be65d77dd",
+      "download_url": "https://github.com/fanzite629/A-study-App/releases/download/v0.1.0/%E6%9A%96%E9%98%B3%E5%AD%A6%E8%80%85-%E5%AE%8C%E6%95%B4%E8%A7%92%E8%89%B2%E5%8C%85.zip"
+    },
+    {
+      "file": "使用说明.md",
+      "bytes": 4141,
+      "sha256": "86ceb333d6e2f80fade92d035b71dbb6b09e565d97610d0481e85083bfbefd62",
+      "download_url": "https://github.com/fanzite629/A-study-App/releases/download/v0.1.0/%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E.md"
+    }
+  ]
+}

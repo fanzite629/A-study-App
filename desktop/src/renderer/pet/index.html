@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'none'; script-src 'self' file:; style-src 'self' file:; img-src tplan-pack: data:;">
+<title>T计划桌宠</title>
+<link rel="stylesheet" href="pet.css">
+</head>
+<body>
+  <!-- Character artwork comes only from the loaded resource pack. -->
+  <div id="char" aria-hidden="true"></div>
+
+  <!-- Shown only when no resource pack is loaded. A UI card, not a character. -->
+  <section id="missing" data-drag hidden>
+    <div class="m-title">未加载角色素材</div>
+    <div class="m-reason" id="missingReason"></div>
+    <div class="row">
+      <button data-act="choose-pack">选择资源包…</button>
+      <button data-act="open-characters-dir">打开资源文件夹</button>
+    </div>
+  </section>
+
+  <div id="bubble" data-hit hidden role="dialog" aria-live="polite"></div>
+  <button id="dot" data-hit hidden aria-label="展开提醒"></button>
+  <button id="chip" data-hit hidden></button>
+
+  <script src="../../shared/states.js"></script>
+  <script src="../../shared/hitmask.js"></script>
+  <script src="character.js"></script>
+  <script src="pet.js"></script>
+</body>
+</html>

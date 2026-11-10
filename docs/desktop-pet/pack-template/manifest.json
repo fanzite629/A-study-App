@@ -1,0 +1,15 @@
+{
+  "format": "tplan-character-pack",
+  "formatVersion": 1,
+  "id": "tplan-scholar",
+  "name": "T计划 · 学者少女",
+  "version": "1.0.0",
+  "author": "",
+  "canvas": { "width": 1200, "height": 1600 },
+  "anchor": { "x": 600, "footY": 1560 },
+  "display": { "defaultHeight": 260 },
+  "hit": { "alphaThreshold": 40, "dilatePx": 8 },
+  "states": {
+    "idle": { "type": "static", "src": "states/idle.png" }
+  }
+}

@@ -1,0 +1,88 @@
+/* Pet window UI. The window is transparent; only the character image (from the
+   resource pack) and these functional controls are visible. Nothing here is
+   applied to the character artwork itself. */
+:root {
+  --panel: #FFF9F4; --line: #E2DED3; --text: #1F1E1D; --t2: #5B5953; --t3: #75736C;
+  --accent: #BF5D39; --accent-ink: #AF4F2C; --accent-soft: #F7E6DC; --ok: #4F7A43;
+  --shadow: 0 6px 20px rgba(60, 45, 30, .18);
+  --sans: system-ui, "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+  --serif: "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --panel: #30302E; --line: #46453F; --text: #ECEAE3; --t2: #BCBAB2; --t3: #9C9A91;
+    --accent: #C2603B; --accent-ink: #EB9A78; --accent-soft: #4A3229; --shadow: 0 6px 20px rgba(0,0,0,.45); }
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden; background: transparent;
+  font: 13px/1.5 var(--sans); color: var(--text); user-select: none; -webkit-user-select: none;
+}
+[hidden] { display: none !important; }
+
+/* Character layers: positioned by the renderer; no styling of the artwork. */
+#char { position: absolute; inset: 0; pointer-events: none; }
+.char-layer { position: absolute; display: block; max-width: none; pointer-events: none; }
+.char-layer:not([hidden]) { transform-origin: 50% 97%; animation: breathe 5s ease-in-out infinite; }
+@keyframes breathe { 0%,100% { transform:scaleY(1); } 50% { transform:scaleY(1.003); } }
+body.reduced-motion .char-layer, body.reduced-motion #bubble, body.reduced-motion #chip { animation:none!important; }
+@media (prefers-reduced-motion:reduce) { .char-layer { animation:none!important; } }
+
+/* Missing-assets card */
+#missing {
+  position: absolute; padding: 12px 14px; border-radius: 12px; background: var(--panel);
+  border: 1px dashed var(--accent); box-shadow: var(--shadow); cursor: grab;
+}
+#missing .m-title { font-weight: 600; color: var(--accent-ink); }
+#missing .m-reason { margin: 4px 0 8px; color: var(--t2); font-size: 12px; max-height: 3.2em; overflow: hidden; }
+
+/* Bubble */
+#bubble {
+  position: absolute; padding: 10px 12px; border-radius: 12px; background: var(--panel);
+  border: 1px solid var(--line); box-shadow: var(--shadow); overflow: auto;
+  animation: pop .16s ease-out;
+}
+@keyframes pop { from { transform: translateY(4px); opacity: 0; } to { transform: none; opacity: 1; } }
+#bubble .say { margin: 0 0 6px; }
+#bubble .title { font-family: var(--serif); font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+#bubble .sub { color: var(--t3); font-size: 12px; margin-bottom: 6px; }
+#bubble .clock { font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 600; color: var(--accent-ink); }
+#bubble .x { position: absolute; top: 4px; right: 6px; border: 0; background: none; color: var(--t3); font-size: 14px; padding: 2px 4px; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+button {
+  font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 4px 9px; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.acc { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.link { border: 0; background: none; color: var(--accent-ink); padding: 2px 4px; }
+.list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.list button { text-align: left; display: flex; justify-content: space-between; gap: 8px; }
+.list .meta { color: var(--t3); font-size: 11px; white-space: nowrap; }
+.review-row { padding:8px 0; border-bottom:1px solid var(--line); }
+input[type=time] { color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:6px;max-width:120px; }
+input[type=text] {
+  width: 100%; font: inherit; color: var(--text); background: transparent; border: 1px solid var(--line);
+  border-radius: 8px; padding: 5px 8px; margin-top: 6px; user-select: text; -webkit-user-select: text;
+}
+input[type=text]:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.chips button { font-size: 11px; padding: 2px 7px; border-radius: 999px; }
+
+/* Collapsed-reminder dot */
+#dot { position: absolute; width: 16px; height: 16px; padding: 0; border-radius: 50%; background: var(--accent); border: 2px solid var(--panel); box-shadow: var(--shadow); }
+
+/* Timer chip */
+#chip {
+  position: absolute; display: flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px;
+  background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
+  font-variant-numeric: tabular-nums; font-size: 12px; white-space: nowrap;
+}
+#chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+#chip.paused i { background: transparent; border: 1.5px solid var(--accent); }
+#chip.due i, #chip.due { animation: pulse 1.6s ease-in-out infinite; }
+#chip.rest i { background: var(--ok); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 4px var(--accent-soft); } }
+
+body.dragging, body.dragging * { cursor: grabbing !important; }
+
+@media (prefers-reduced-motion: reduce) { #bubble { animation: none; } #chip.due, #chip.due i { animation: none; } }

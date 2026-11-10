@@ -1,0 +1,16 @@
+{
+  "format": "tplan-character-pack",
+  "formatVersion": 1,
+  "id": "dev-test-pack",
+  "name": "开发测试素材（非正式角色）",
+  "version": "0.0.1",
+  "author": "dev fixture",
+  "canvas": { "width": 900, "height": 1200 },
+  "anchor": { "x": 450, "footY": 1180 },
+  "display": { "defaultHeight": 260 },
+  "hit": { "alphaThreshold": 40, "dilatePx": 8 },
+  "states": {
+    "idle":  { "type": "static", "src": "idle.png" },
+    "focus": { "type": "static", "src": "focus.png" }
+  }
+}

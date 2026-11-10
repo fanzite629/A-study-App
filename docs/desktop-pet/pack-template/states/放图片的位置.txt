@@ -1,0 +1,4 @@
+把 idle.png 放在这个 states 文件夹里（1200×1600 透明 PNG，鞋底在 y=1560，两脚中间在 x=600）。
+以后有了其他状态的图片，放在同一文件夹，并在 manifest.json 的 states 里加上对应条目，例如：
+  "focus": { "type": "static", "src": "states/focus.png" }
+详见 ../character-pack-spec.md

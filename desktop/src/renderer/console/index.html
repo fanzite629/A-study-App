@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'none'; script-src 'self' file:; style-src 'self' file:; img-src data: tplan-pack:;">
+<title>T计划</title>
+<link rel="stylesheet" href="console.css">
+</head>
+<body>
+<header>
+  <div class="brand">T计划 <small>桌面版 · 开发控制台</small></div>
+  <nav id="nav">
+    <button data-go="today">今天</button>
+    <button data-go="review">回看</button>
+    <button data-go="pack">角色资源</button>
+    <button data-go="gallery">角色图鉴</button>
+    <button data-go="pet">桌宠窗口</button>
+    <button data-go="diag">诊断</button>
+  </nav>
+</header>
+<p class="banner">这是桌面版的临时主窗口，与桌宠共用同一份任务、计时和记录。原 T计划 页面接入共享后台是下一步工作。</p>
+<main id="main"></main>
+<script src="console.js"></script>
+</body>
+</html>
